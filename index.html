@@ -84,6 +84,12 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{padding:10px;bord
 .passwordBox button{width:100%;margin-top:12px}
 #passwordError{height:20px;color:#dc2626;font-size:13px;margin-top:8px}
 </style>
+
+<style>
+.hit-ok{color:#16a34a;font-weight:800}
+.hit-no{color:#dc2626;font-weight:800}
+.stat-line{display:flex;gap:10px;flex-wrap:wrap}
+</style>
 </head>
 <body>
 <div id="passwordScreen">
@@ -128,6 +134,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{padding:10px;bord
       <div>
         <h2 style="margin:0">下一期预测排名</h2>
         <div class="small" id="sampleInfo">尚未预测</div>
+        <div class="small" id="lastHitInfo" style="margin-top:6px">上期是否命中：—</div>
       </div>
       <div class="badge" id="topPick">—</div>
     </div>
@@ -159,7 +166,12 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{padding:10px;bord
   </div>
 
   <div class="card">
-    <h2>历史数据</h2>
+    <div class="predict-head">
+      <div>
+        <h2 style="margin:0">历史数据</h2>
+        <div class="small" id="statsInfo" style="margin-top:6px">总期数：0｜首选命中：0｜命中率：—</div>
+      </div>
+    </div>
     <div id="historyTable" class="small">暂无数据</div>
   </div>
 </div>
@@ -281,22 +293,91 @@ function predict(){
   }
 }
 
+function backtest(a){
+  // 第16期开始才有预测；每一期预测只使用该期之前的数据，绝不偷看未来。
+  const rows=[];
+  let hits=0, tested=0;
+
+  for(let i=15;i<a.length;i++){
+    const train=a.slice(0,i);
+    const prediction=calcScores(train);
+    const top=prediction[0].x;
+    const actual=a[i];
+    const hit=top===actual;
+    tested++;
+    if(hit) hits++;
+    const rank=prediction.findIndex(o=>o.x===actual)+1;
+    rows.push({period:i+1,actual,top,rank,hit,prediction});
+  }
+  return {rows,hits,tested};
+}
+
 function render(res,a){
-  document.getElementById("sampleInfo").textContent=`当前样本：${a.length}期｜预测第 ${a.length+1} 期`;
-  document.getElementById("topPick").textContent=`首选：${res[0].x}号 ${ALIAS[res[0].x]}`;
+  const bt=backtest(a);
+  const total=a.length;
+  const rate=bt.tested ? (bt.hits/bt.tested*100) : 0;
+
+  document.getElementById("sampleInfo").textContent=
+    `当前样本：${a.length}期｜预测第 ${a.length+1} 期`;
+
+  document.getElementById("topPick").textContent=
+    `首选：${res[0].x}号 ${ALIAS[res[0].x]}`;
+
+  // 上期命中情况：上一期的“首选预测”是否命中。
+  if(bt.rows.length){
+    const last=bt.rows[bt.rows.length-1];
+    document.getElementById("lastHitInfo").innerHTML=
+      `上期实际：${last.actual}号 ${ALIAS[last.actual]}｜上期首选：${last.top}号 ${ALIAS[last.top]}｜`+
+      `<span class="${last.hit?'hit-ok':'hit-no'}">${last.hit?'✓ 命中':'✕ 未命中'}</span>`;
+  }else{
+    document.getElementById("lastHitInfo").textContent="上期是否命中：暂无（至少16期后开始统计）";
+  }
+
   document.getElementById("ranking").innerHTML=res.map((o,i)=>`
     <div class="rank ${i===0?'top':''}">
       <div class="pos">第 ${i+1} 名</div>
       <div class="num">${o.x}</div>
       <div class="alias">${ALIAS[o.x]}</div>
-      <div class="score">模型分数 ${o.score.toFixed(1)}</div>
+      <div class="score">预测概率 ${o.score.toFixed(1)}%</div>
     </div>`).join("");
-  document.getElementById("historyTable").innerHTML=`
-    <table><tr><th>期次</th><th>号码</th><th>别名</th></tr>
-    ${a.slice().reverse().map((x,i)=>`<tr><td>${a.length-i}</td><td>${x}</td><td>${ALIAS[x]}</td></tr>`).join("")}
-    </table>`;
-}
 
+  document.getElementById("statsInfo").textContent=
+    `总期数：${total}｜可回测期数：${bt.tested}｜首选命中：${bt.hits}｜命中率：${bt.tested?rate.toFixed(2)+'%':'—'}`;
+
+  if(!a.length){
+    document.getElementById("historyTable").textContent="暂无数据";
+    return;
+  }
+
+  const rows=a.map((actual,i)=>{
+    if(i<15){
+      return `<tr>
+        <td>${i+1}</td><td>${actual}</td><td>${ALIAS[actual]}</td>
+        <td>—</td><td>—</td><td>样本期</td>
+      </tr>`;
+    }
+    const r=bt.rows[i-15];
+    return `<tr>
+      <td>${r.period}</td>
+      <td>${r.actual}</td>
+      <td>${ALIAS[r.actual]}</td>
+      <td>${r.top}号 ${ALIAS[r.top]}</td>
+      <td>第${r.rank}名</td>
+      <td class="${r.hit?'hit-ok':'hit-no'}">${r.hit?'✓ 命中':'✕ 未命中'}</td>
+    </tr>`;
+  }).reverse().join("");
+
+  document.getElementById("historyTable").innerHTML=`
+    <div style="overflow-x:auto">
+      <table>
+        <tr>
+          <th>期次</th><th>实际号码</th><th>别名</th>
+          <th>当期首选</th><th>实际号码排名</th><th>首选结果</th>
+        </tr>
+        ${rows}
+      </table>
+    </div>`;
+}
 function addActual(){
   const v=Number(document.getElementById("actual").value);
   if(!v){alert("请选择实际开奖号码");return}
@@ -317,6 +398,8 @@ function clearAll(){
   document.getElementById("ranking").innerHTML="";
   document.getElementById("sampleInfo").textContent="尚未预测";
   document.getElementById("topPick").textContent="—";
+  document.getElementById("lastHitInfo").textContent="上期是否命中：—";
+  document.getElementById("statsInfo").textContent="总期数：0｜首选命中：0｜命中率：—";
   document.getElementById("historyTable").textContent="暂无数据";
   document.getElementById("msg").textContent="";
 }
