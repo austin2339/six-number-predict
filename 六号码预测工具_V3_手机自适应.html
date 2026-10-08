@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>六号码预测工具</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f5f8;color:#172033;font-family:Arial,"Microsoft YaHei",sans-serif}
+.container{max-width:1180px;margin:28px auto;padding:0 20px}
+.card{background:#fff;border-radius:16px;box-shadow:0 5px 22px rgba(20,35,60,.08);padding:22px;margin-bottom:18px}
+h1{margin:0 0 6px;font-size:28px}.sub{color:#718096;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}
+label{font-weight:700;display:block;margin-bottom:8px}
+textarea{width:100%;min-height:125px;border:1px solid #d9e0ea;border-radius:10px;padding:12px;font-size:16px;resize:vertical;outline:none}
+textarea:focus{border-color:#4f7cff}
+button{border:0;border-radius:9px;padding:11px 18px;font-size:15px;font-weight:700;cursor:pointer;background:#2563eb;color:white;margin:6px 6px 0 0}
+button.secondary{background:#e9eef7;color:#26344d}
+button.green{background:#16a34a}
+button.red{background:#dc2626}
+.hint{font-size:13px;color:#7b8798;line-height:1.6;margin-top:8px}
+.msg{min-height:22px;margin-top:10px;font-weight:700}
+.predict-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.badge{background:#eef4ff;color:#2563eb;padding:6px 10px;border-radius:999px;font-weight:700}
+.rank-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.rank{border:1px solid #e2e8f0;border-radius:13px;padding:15px 8px;text-align:center;position:relative}
+.rank.top{border:2px solid #2563eb;background:#f7faff}
+.pos{font-size:12px;color:#94a3b8}.num{font-size:32px;font-weight:800;margin:5px 0}
+.alias{font-size:14px;font-weight:700}.score{font-size:12px;color:#64748b;margin-top:6px}
+.actual{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+select,input[type=number]{height:42px;border:1px solid #d9e0ea;border-radius:9px;padding:0 12px;font-size:16px}
+table{width:100%;border-collapse:collapse;margin-top:8px}th,td{padding:10px;border-bottom:1px solid #edf0f4;text-align:center}th{background:#f8fafc}
+.small{font-size:13px;color:#64748b}
+@media(max-width:800px){
+  body{background:#f3f5f8}
+  .container{width:100%;margin:0 auto;padding:10px}
+  .card{border-radius:12px;padding:15px;margin-bottom:12px;box-shadow:0 3px 14px rgba(20,35,60,.07)}
+  h1{font-size:22px;margin-bottom:4px}
+  h2{font-size:18px}
+  .sub{font-size:13px;margin-bottom:12px}
+  .grid{grid-template-columns:1fr;gap:12px}
+  textarea{min-height:105px;font-size:16px}
+  button{width:100%;margin:6px 0 0;padding:12px 10px}
+  .predict-head{align-items:flex-start;gap:8px}
+  .predict-head h2{margin-bottom:4px}
+  .badge{font-size:13px;white-space:nowrap}
+  .rank-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .rank{padding:12px 6px;border-radius:11px}
+  .num{font-size:28px;margin:3px 0}
+  .alias{font-size:14px}
+  .score{font-size:11px}
+  .actual{display:block}
+  select,input[type=number]{width:100%;height:44px}
+  .actual button{margin-top:10px}
+  table{font-size:13px}
+  th,td{padding:8px 5px}
+  .hint{font-size:12px}
+}
+@media(max-width:380px){
+  .container{padding:7px}
+  .card{padding:12px}
+  h1{font-size:20px}
+  .rank-grid{gap:6px}
+  .rank{padding:10px 4px}
+  .num{font-size:25px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h1>六号码预测工具</h1>
+    <div class="sub">1～6号 · 赔率 1赔4 · 基于历史序列预测下一期</div>
+    <div class="grid">
+      <div>
+        <label>历史开奖号码</label>
+        <textarea id="history" placeholder="直接输入号码即可，例如：262416325642163"></textarea>
+        <div class="hint">至少输入15个号码。可以直接连续输入，例如 2624163256，程序会自动整理为 2 6 2 4 1 6 3 2 5 6。也支持空格、逗号、换行。顺序必须按开奖先后排列，最后一个是最近一期。</div>
+        <button onclick="predict()">开始预测下一期</button>
+        <button class="secondary" onclick="demo()">加载示例数据</button>
+        <button class="secondary" onclick="clearAll()">清空</button>
+        <div id="msg" class="msg"></div>
+      </div>
+      <div>
+        <label>规则</label>
+        <div class="card" style="background:#f8fafc;box-shadow:none;margin:0">
+          <div style="line-height:2">
+            1号：吉品<br>2号：拔桂<br>3号：逢春<br>
+            4号：人生<br>5号：日山<br>6号：安土
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="predict-head">
+      <div>
+        <h2 style="margin:0">下一期预测排名</h2>
+        <div class="small" id="sampleInfo">尚未预测</div>
+      </div>
+      <div class="badge" id="topPick">—</div>
+    </div>
+    <div class="rank-grid" id="ranking"></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>录入实际开奖</h2>
+      <div class="actual">
+        <div>
+          <label>本期实际号码</label>
+          <select id="actual">
+            <option value="">请选择</option><option>1</option><option>2</option><option>3</option>
+            <option>4</option><option>5</option><option>6</option>
+          </select>
+        </div>
+        <button class="green" onclick="addActual()">加入样本并预测下一期</button>
+      </div>
+      <div class="hint">录入后会自动把号码加入历史末尾，并重新计算下一期预测。</div>
+    </div>
+    <div class="card">
+      <h2>模型说明</h2>
+      <div class="small" style="line-height:1.8">
+        当前版本采用组合评分：近期趋势 + 一阶转移 + 二阶转移 + 三阶模式 + 间隔/回补特征。
+        不使用未来数据。最终把6个号码统一换算成相对分数，再从高到低排列。
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>历史数据</h2>
+    <div id="historyTable" class="small">暂无数据</div>
+  </div>
+</div>
+
+<script>
+const ALIAS={1:"吉品",2:"拔桂",3:"逢春",4:"人生",5:"日山",6:"安土"};
+
+function normalizeInput(){
+  const ta=document.getElementById("history");
+  let raw=ta.value.replace(/[^0-9]/g,"");
+  // 连续数字自动按单个号码拆分；只允许1～6
+  raw=[...raw].filter(ch=>"123456".includes(ch)).join(" ");
+  ta.value=raw;
+  return raw;
+}
+function parseHistory(){
+  const raw=normalizeInput().trim();
+  const a=raw.split(/\s+/).filter(Boolean).map(Number);
+  if(a.length<15) throw new Error("至少需要15个历史号码");
+  if(a.some(x=>x<1||x>6||!Number.isInteger(x))) throw new Error("只能输入1～6的整数");
+  return a;
+}
+
+// 输入时自动整理：连续输入 262416 -> 2 6 2 4 1 6
+document.getElementById("history").addEventListener("input", function(){
+  const pos=this.selectionStart;
+  const before=this.value;
+  const digits=before.replace(/[^0-9]/g,"");
+  const valid=[...digits].filter(ch=>"123456".includes(ch)).join(" ");
+  this.value=valid;
+  // 光标放到末尾，方便连续输入
+  this.selectionStart=this.selectionEnd=this.value.length;
+});
+
+function transitionScore(a, order){
+  const s=Array(7).fill(0);
+  if(a.length<=order) return s;
+  const decay=Math.max(0.92, 1-order*0.015);
+  for(let i=order;i<a.length;i++){
+    let match=true;
+    for(let k=1;k<=order;k++){
+      if(a[i-k]!==a[a.length-k]){match=false;break}
+    }
+    if(match) s[a[i]] += Math.pow(decay,a.length-1-i);
+  }
+  return s;
+}
+
+function pairScore(a){
+  const s=Array(7).fill(0);
+  const last=a[a.length-1];
+  for(let i=1;i<a.length;i++){
+    if(a[i-1]===last){
+      const rec=Math.exp((i-a.length+1)/18);
+      s[a[i]]+=2.5*rec;
+    }
+  }
+  return s;
+}
+
+function recentScore(a){
+  const s=Array(7).fill(0);
+  const n=Math.min(12,a.length);
+  for(let i=a.length-n;i<a.length;i++){
+    const age=a.length-1-i;
+    s[a[i]] += Math.exp(-age/4.5);
+  }
+  return s;
+}
+
+function gapScore(a){
+  const s=Array(7).fill(0);
+  for(let x=1;x<=6;x++){
+    let last=-1;
+    for(let i=a.length-1;i>=0;i--) if(a[i]===x){last=i;break}
+    if(last<0){s[x]=0.8;continue}
+    const gap=a.length-1-last;
+    // 不是简单“越久越好”，只给予温和的间隔特征
+    s[x]=Math.min(gap,12)/12;
+  }
+  return s;
+}
+
+function frequencyScore(a){
+  const s=Array(7).fill(0);
+  const n=Math.min(30,a.length);
+  for(let i=a.length-n;i<a.length;i++) s[a[i]]++;
+  for(let x=1;x<=6;x++) s[x]/=n;
+  return s;
+}
+
+function calcScores(a){
+  const t1=transitionScore(a,1),t2=transitionScore(a,2),t3=transitionScore(a,3);
+  const p=pairScore(a),r=recentScore(a),g=gapScore(a),f=frequencyScore(a);
+  const raw=Array(7).fill(0);
+  for(let x=1;x<=6;x++){
+    raw[x]=1.00*t1[x]+1.25*t2[x]+1.50*t3[x]+0.75*p[x]+0.55*r[x]+0.35*g[x]+0.45*f[x];
+  }
+  const min=Math.min(...raw.slice(1)), max=Math.max(...raw.slice(1));
+  const out=[];
+  for(let x=1;x<=6;x++){
+    const norm=max===min?50:50+50*(raw[x]-min)/(max-min);
+    out.push({x,raw:raw[x],score:norm});
+  }
+  out.sort((a,b)=>b.score-a.score);
+  return out;
+}
+
+function predict(){
+  try{
+    const a=parseHistory();
+    const res=calcScores(a);
+    render(res,a);
+    document.getElementById("msg").style.color="#16a34a";
+    document.getElementById("msg").textContent="预测完成";
+  }catch(e){
+    document.getElementById("msg").style.color="#dc2626";
+    document.getElementById("msg").textContent=e.message;
+  }
+}
+
+function render(res,a){
+  document.getElementById("sampleInfo").textContent=`当前样本：${a.length}期｜预测第 ${a.length+1} 期`;
+  document.getElementById("topPick").textContent=`首选：${res[0].x}号 ${ALIAS[res[0].x]}`;
+  document.getElementById("ranking").innerHTML=res.map((o,i)=>`
+    <div class="rank ${i===0?'top':''}">
+      <div class="pos">第 ${i+1} 名</div>
+      <div class="num">${o.x}</div>
+      <div class="alias">${ALIAS[o.x]}</div>
+      <div class="score">模型分数 ${o.score.toFixed(1)}</div>
+    </div>`).join("");
+  document.getElementById("historyTable").innerHTML=`
+    <table><tr><th>期次</th><th>号码</th><th>别名</th></tr>
+    ${a.slice().reverse().map((x,i)=>`<tr><td>${a.length-i}</td><td>${x}</td><td>${ALIAS[x]}</td></tr>`).join("")}
+    </table>`;
+}
+
+function addActual(){
+  const v=Number(document.getElementById("actual").value);
+  if(!v){alert("请选择实际开奖号码");return}
+  const ta=document.getElementById("history");
+  const old=ta.value.trim();
+  ta.value=old?(old+" "+v):String(v);
+  document.getElementById("actual").value="";
+  predict();
+}
+
+function demo(){
+  document.getElementById("history").value=
+  "2 6 2 4 1 6 3 2 5 6 4 2 1 6 3 2 6 4 1 6 2 5 6 3 2 4 6 1 2 6";
+  predict();
+}
+function clearAll(){
+  document.getElementById("history").value="";
+  document.getElementById("ranking").innerHTML="";
+  document.getElementById("sampleInfo").textContent="尚未预测";
+  document.getElementById("topPick").textContent="—";
+  document.getElementById("historyTable").textContent="暂无数据";
+  document.getElementById("msg").textContent="";
+}
+</script>
+</body>
+</html>
