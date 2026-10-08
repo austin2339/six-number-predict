@@ -23,9 +23,9 @@ button.red{background:#dc2626}
 .predict-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .badge{background:#eef4ff;color:#2563eb;padding:6px 10px;border-radius:999px;font-weight:700}
 .rank-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
-.rank{border:1px solid #e2e8f0;border-radius:13px;padding:15px 8px;text-align:center;position:relative}
-.rank.top{border:2px solid #2563eb;background:#f7faff}
-.pos{font-size:12px;color:#94a3b8}.num{font-size:32px;font-weight:800;margin:5px 0}
+.rank{border:1px solid #dfe5ee;border-radius:13px;padding:15px 8px;text-align:center;position:relative;background:#f7f9fc}
+.rank.top{border:2px solid #2563eb;background:#eef4ff}
+.pos{font-size:12px;color:#94a3b8}.num{font-size:42px;font-weight:900;margin:4px 0;line-height:1.05}
 .alias{font-size:14px;font-weight:700}.score{font-size:12px;color:#64748b;margin-top:6px}
 .actual{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
 select,input[type=number]{height:42px;border:1px solid #d9e0ea;border-radius:9px;padding:0 12px;font-size:16px}
@@ -46,7 +46,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{padding:10px;bord
   .badge{font-size:13px;white-space:nowrap}
   .rank-grid{grid-template-columns:repeat(2,1fr);gap:8px}
   .rank{padding:12px 6px;border-radius:11px}
-  .num{font-size:28px;margin:3px 0}
+  .num{font-size:36px;margin:3px 0;line-height:1.05}
   .alias{font-size:14px}
   .score{font-size:11px}
   .actual{display:block}
@@ -62,7 +62,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{padding:10px;bord
   h1{font-size:20px}
   .rank-grid{gap:6px}
   .rank{padding:10px 4px}
-  .num{font-size:25px}
+  .num{font-size:34px}
 }
 </style>
 
@@ -116,7 +116,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{padding:10px;bord
         <div class="card" style="background:#f8fafc;box-shadow:none;margin:0">
           <div style="line-height:2">
             1号：吉品<br>2号：拔桂<br>3号：逢春<br>
-            4号：人生<br>5号：日山<br>6号：安土
+            4号：人生<br>5号：日山<br>6号：安士
           </div>
         </div>
       </div>
@@ -165,7 +165,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{padding:10px;bord
 </div>
 
 <script>
-const ALIAS={1:"吉品",2:"拔桂",3:"逢春",4:"人生",5:"日山",6:"安土"};
+const ALIAS={1:"吉品",2:"拔桂",3:"逢春",4:"人生",5:"日山",6:"安士"};
 
 function normalizeInput(){
   const ta=document.getElementById("history");
