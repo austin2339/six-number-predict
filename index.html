@@ -169,7 +169,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{padding:10px;bord
     <div class="predict-head">
       <div>
         <h2 style="margin:0">历史数据</h2>
-        <div class="small" id="statsInfo" style="margin-top:6px">总期数：0｜首选命中：0｜命中率：—</div>
+        <div class="small" id="statsInfo" style="margin-top:6px">总期数：0｜前两名命中：0｜命中率：—</div>
       </div>
     </div>
     <div id="historyTable" class="small">暂无数据</div>
@@ -301,13 +301,14 @@ function backtest(a){
   for(let i=15;i<a.length;i++){
     const train=a.slice(0,i);
     const prediction=calcScores(train);
-    const top=prediction[0].x;
+    const top1=prediction[0].x;
+    const top2=prediction[1].x;
     const actual=a[i];
-    const hit=top===actual;
+    const rank=prediction.findIndex(o=>o.x===actual)+1;
+    const hit=rank<=2;
     tested++;
     if(hit) hits++;
-    const rank=prediction.findIndex(o=>o.x===actual)+1;
-    rows.push({period:i+1,actual,top,rank,hit,prediction});
+    rows.push({period:i+1,actual,top1,top2,rank,hit,prediction});
   }
   return {rows,hits,tested};
 }
@@ -321,13 +322,13 @@ function render(res,a){
     `当前样本：${a.length}期｜预测第 ${a.length+1} 期`;
 
   document.getElementById("topPick").textContent=
-    `首选：${res[0].x}号 ${ALIAS[res[0].x]}`;
+    `前两名：${res[0].x}号 ${ALIAS[res[0].x]}`;
 
-  // 上期命中情况：上一期的“首选预测”是否命中。
+  // 上期命中情况：上一期的“前两名预测”是否命中。
   if(bt.rows.length){
     const last=bt.rows[bt.rows.length-1];
     document.getElementById("lastHitInfo").innerHTML=
-      `上期实际：${last.actual}号 ${ALIAS[last.actual]}｜上期首选：${last.top}号 ${ALIAS[last.top]}｜`+
+      `上期实际：${last.actual}号 ${ALIAS[last.actual]}｜上期前两名：${last.top1}号 ${ALIAS[last.top1]}、${last.top2}号 ${ALIAS[last.top2]}｜`+
       `<span class="${last.hit?'hit-ok':'hit-no'}">${last.hit?'✓ 命中':'✕ 未命中'}</span>`;
   }else{
     document.getElementById("lastHitInfo").textContent="上期是否命中：暂无（至少16期后开始统计）";
@@ -342,7 +343,7 @@ function render(res,a){
     </div>`).join("");
 
   document.getElementById("statsInfo").textContent=
-    `总期数：${total}｜可回测期数：${bt.tested}｜首选命中：${bt.hits}｜命中率：${bt.tested?rate.toFixed(2)+'%':'—'}`;
+    `总期数：${total}｜可回测期数：${bt.tested}｜前两名命中：${bt.hits}｜前两名命中率：${bt.tested?rate.toFixed(2)+'%':'—'}`;
 
   if(!a.length){
     document.getElementById("historyTable").textContent="暂无数据";
@@ -361,7 +362,7 @@ function render(res,a){
       <td>${r.period}</td>
       <td>${r.actual}</td>
       <td>${ALIAS[r.actual]}</td>
-      <td>${r.top}号 ${ALIAS[r.top]}</td>
+      <td>${r.top1}号 ${ALIAS[r.top1]}、${r.top2}号 ${ALIAS[r.top2]}</td>
       <td>第${r.rank}名</td>
       <td class="${r.hit?'hit-ok':'hit-no'}">${r.hit?'✓ 命中':'✕ 未命中'}</td>
     </tr>`;
@@ -372,7 +373,7 @@ function render(res,a){
       <table>
         <tr>
           <th>期次</th><th>实际号码</th><th>别名</th>
-          <th>当期首选</th><th>实际号码排名</th><th>首选结果</th>
+          <th>当期前两名</th><th>实际号码排名</th><th>前两名结果</th>
         </tr>
         ${rows}
       </table>
@@ -399,7 +400,7 @@ function clearAll(){
   document.getElementById("sampleInfo").textContent="尚未预测";
   document.getElementById("topPick").textContent="—";
   document.getElementById("lastHitInfo").textContent="上期是否命中：—";
-  document.getElementById("statsInfo").textContent="总期数：0｜首选命中：0｜命中率：—";
+  document.getElementById("statsInfo").textContent="总期数：0｜前两名命中：0｜命中率：—";
   document.getElementById("historyTable").textContent="暂无数据";
   document.getElementById("msg").textContent="";
 }
